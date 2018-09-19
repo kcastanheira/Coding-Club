@@ -1,0 +1,297 @@
+---
+title: "R Basics & Data Cleaning"
+author: "Kevin da Silva Castanheira"
+date: "9/18/2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+
+```
+
+# R Basics
+
+#### Asking for Help
+If you ever get stuck and need more information on any function you can type the following commands into the console. They are equivalent.
+```{r,results='hide'}
+help(aggregate) 
+?aggregate
+```
+#### Variable types
+
+In R as with many other languages your variable can take on several different types:
+Character: a combination of letters
+```{r}
+"Hi everyone"
+```
+
+Numeric: Number (integer or decimal)
+```{r}
+12
+123.232412
+```
+
+Factor: A set of variables with pre-defined values
+```{r}
+factor(c("male", "female", "other","male", "female","male", "female","male", "female"))
+factor(c("monday", "tuesday", "wednesday","thursday", "friday","saturday", "sunday"))
+factor(c(1,0,1,1,0,1,0,1))
+```
+
+
+#### Vectors, Data-frames, Lists
+
+R has a few basic data structures:
+
+##### Vector: a combiantion of variables with the same type
+```{r}
+c(1,2,3,4,5)
+5:10
+c("Dog", "Cat", "Bird", "Fish")
+```
+
+##### List: a combiantion of variables with no restriction on type
+```{r}
+list(c(1,2,3,4,5), c("Dog", "Cat", "Bird", "Fish"), c(TRUE, FALSE))
+```
+
+##### Data Frame: a matrix organizing data in rows and columns
+```{r}
+data.frame("PID"=1:3, "IQ"=c(100, 130, 90), "Age"=c(24, 23, 21))
+```
+
+#### Unless you save your variable by assigning it a "name", the output will not be retrievable to manipulate
+```{r}
+df = data.frame("PID"=1:3, "IQ"=c(100, 130, 90), "Age"=c(24, 23, 21))
+df[1,2] = 40
+df
+```
+
+
+## Boolean/Logical variables
+
+In most programming languages, there exists boolean/logical variables. They take on the value of TRUE or FALSE. In R as with other languages you can apply operators on them.
+```{r}
+1 > 3
+3 > 1
+3.1 >= 1
+3.1 <= 1
+```
+You can test the equality of two things by using double equal signs.
+```{r}
+3 == 1
+"Cat" == "Cat"
+"CAT" == "Cat"
+```
+You can also test if a value or multiple values is/are present in a vactor:
+```{r}
+1 %in% c(2,3,4,5)
+c(1,2,3) %in% c(2,3,4,5)
+```
+
+##### Boolean Operators
+In R, the ! symbolizes the NOT operator. It will return the opposite value of the boolean.
+```{r}
+3 != 1
+!TRUE
+!FALSE
+```
+
+You can combine boolean variables by using the AND/OR operators.
+
+AND requires both variables to be TRUE to return TRUE
+```{r}
+(1 > 4) & (1 < 4)
+(6 > 4) & (1 < 4)
+```
+OR only requires that one variable equal to TRUE
+```{r}
+(1 > 4) | (1 < 4)
+```
+
+
+You can also use if and else statements to control the output of your code.
+#### If/Else statements
+```{r}
+if(1 < 2){
+  print("TRUE")
+}
+
+if(3 < 1){
+  print("IMPOSSIBLE")
+} else{
+  print("3 is greater than 1")
+}
+
+if(3 < 1){
+  print("IMPOSSIBLE")
+} else if(3 > 1){
+  print("3 is greater than 1")
+} else{
+  print("WHAT?")
+}
+
+```
+
+## For loops
+If you need to do something multiple time you can use loops to accomplish this.
+
+For loops work by repeating whatever is inside them until a pre-specified condition is met.
+```{r}
+for(i in 1:7){
+  print(i)
+}
+
+```
+
+While loops are similar except function without needing to specify exactly how many time to repeat a process.
+```{r}
+t = 0
+while(t<0.5){
+  t = runif(1,0,1) # change the value of t by sampling from a uniform distribution
+  # the first argument into the function specifies the number of sample
+  # the second and third arguments specify the min and max of the range respectively
+  print(t)
+}
+
+```
+
+# Loading Data
+To load data you first need to know a few things about paths.
+
+1) You do not need to provide a full path if the file you're interested in is in the current working directory
+
+```{r}
+getwd()
+```
+If this is not where you want your working directory to point you can change it
+```{r, warning=FALSE, message=FALSE}
+setwd("~/Desktop")
+```
+
+2) If you are on a Mac or a Linux OS paths look different than on a PC
+MAC/LINUX: "/Users/kevin/Desktop/File" OR "~/Desktop/File"
+PC: "C:\Users\Kevin\Desktop\File"
+You can load data into R from a csv using the command read.csv. 
+```{r}
+NFC <- read.csv("~/Coding-Club/R_Basics/NFC.csv")
+
+```
+If the first column contains row names, you can specify this to the function in order not read it in as a new column.
+```{r}
+df <-read.csv("~/Coding-Club/R_Basics/data.csv", sep = ',',
+             row.names = 1)
+```
+
+OR if your data is stored in some other format (separated by semi-colons) and does not contain headers, you can modify the arguments into the function read.csv to read the data properly.
+```{r}
+Digit_Symbol <- read.csv("~/Coding-Club/R_Basics/DigitSymbol.txt", header=FALSE, sep=";")
+
+colnames(Digit_Symbol) = c("PID", "Score")
+```
+
+#### Looking at your data
+Get thr first 10 values
+```{r}
+head(NFC, 10)
+```
+Or the last 10
+```{r}
+tail(NFC,10)
+```
+
+Or a summary of all the columns
+```{r}
+summary(NFC)
+```
+Or you can look at a single column by indexing into the data frame
+```{r, results='hide'}
+NFC$PID
+NFC[,1] # format is DATAFRAME[ROW, COLUMN]
+```
+
+You can apply various functions to your columns. One useful function is unique which will return all the unique values of a column. I used it here to get a list of all Participant IDs.
+```{r}
+unique(NFC$PID)
+```
+
+# Data Cleaning
+There are many useful function which can allow you to look at and manipulate you data.
+One useful feature of R is to remove trials or participants.
+
+is.na is a function which checks if a value is NA.
+Here we are specifying we only want the rows in which Gender is not NA.
+```{r}
+NFC = NFC[!is.na(NFC$Gender),]
+```
+
+Or we can exclude participants with an IQ score below a certain threshold
+```{r}
+NFC = NFC[NFC$IQ > 80,]
+```
+
+You can index into a data frame to change the values.
+For example, here I am reverse coding the values of certain questions.
+```{r}
+NFC_reversal = c("Q3", "Q4", "Q5", "Q7", "Q8", "Q9", "Q12", "Q16", "Q17")
+NFC$Value[NFC$Question %in% NFC_reversal] = 6 - NFC$Value[NFC$Question %in% NFC_reversal]
+```
+
+#### GREP
+You can use regular expressions to find patterns of characters and numbers. In our example, we can try to classify people based on their highest level of education...
+```{r}
+unique(NFC$Education)
+```
+Some rules of GREP 
+(see the link for more info: https://stat.ethz.ch/R-manual/R-devel/library/base/html/regex.html)
+
+1) It is case sensitive Case so make sure everything is in the same case
+```{r}
+NFC$Education = toupper(NFC$Education)
+unique(NFC$Education)
+```
+
+2) things preceeded by * are matched 0 or more times
+3) things preceeded by ? will be matched 0 or 1 times
+4) ^ matches the start of the string of characters
+5) $ matches the start of the end of characters
+```{r}
+
+NFC$Bachelors = grepl("B[.]?S[C]?[.]?[A]?[ACHELOR]?[S]?", NFC$Education) | grepl("UNDERGRAD[UATE]?", NFC$Education)
+
+NFC$HS = NFC$Education == "HIGH SCHOOL"
+
+NFC$Grad = grepl("^GRAD", NFC$Education) | grepl("M[.]?[A]?[S]?[SC]?[.]?", NFC$Education) | grepl("PH[.]?D", NFC$Education)
+```
+
+# Pivot Tables in R
+If you're familiar with Excel, then the function aggregate will be very familiar.
+The function aggregate allows you to apply a function to groups you define. For example, if we want to calculate a score per participant you can sum all the value for every participant.
+
+The variable on the left of the ~ is the "outcome variable" you are applying the function to. The variables on the right of the ~ are the grouping variables. The final two inputs are the data frame and the function respectively
+```{r}
+Scores = aggregate(Value ~ PID, NFC, sum)
+head(Scores, 10)
+```
+You can add several columns to this.
+```{r}
+aggregate(Age ~ Gender+Bachelors, NFC, mean)
+```
+And you can even define your own function! Here I'm defining my own function (SEM).
+```{r}
+aggregate(Age ~ Gender+Bachelors, NFC, function(x) sd(x)/sqrt(length(x)))
+```
+
+# Mapping Values Between data-frames
+Mapvalues allows you to map data from a different data frame and map those values to another data frame based on certain values. For example, mapping the scores of participants from one data frame of a questionnaire to another data frame.
+
+mapvalues takes in 3 arguments
+
+1) the factor to modify
+2) the original values (which match those in 1)
+3) the new values you want to map
+
+since mapvalues is a function not availble in base R, it is from the library plyr, you either need to laod the library plyr or let R know the function is from that library by putting its name before the function name.
+```{r}
+NFC$DigitSymbol = plyr::mapvalues(NFC$PID, Digit_Symbol$PID, Digit_Symbol$Score)
+```
