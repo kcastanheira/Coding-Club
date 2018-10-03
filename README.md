@@ -1,4 +1,5 @@
-# Coding-Club
+# Coding-Club Schedule
+
 September 19th - Intro to R 
 
 October 10th - Data Manipulation wiht Dplyr 
