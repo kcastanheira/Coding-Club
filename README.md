@@ -1,7 +1,12 @@
 # Coding-Club
-September 19th - Intro to R \n
-October 10th - Data Manipulation wiht Dplyr \n
-October 24th - Plotting with ggplot \n
-November 7th - ????? \n
-November 21st - ????? \n
-December 5th - ?????? \n
+September 19th - Intro to R 
+
+October 10th - Data Manipulation wiht Dplyr 
+
+October 24th - Plotting with ggplot 
+
+November 7th - ????? 
+
+November 21st - ????? 
+
+December 5th - ?????? 
