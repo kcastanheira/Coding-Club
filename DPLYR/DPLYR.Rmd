@@ -1,0 +1,313 @@
+---
+title: "Dplyr Bible"
+author: "Kevin da Silva Castanheira"
+date: "8/21/2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Packages 101
+
+dplyr and tidyr are R libraries which fanicilitate data manipulation.
+
+If you do not have these libraries installed, you can use the function install.packages to install them.
+
+```{r, eval=FALSE}
+install.packages("dplyr")
+install.packages("tidyr")
+```
+
+If you don't know if you have these packages installed, you can check by using the function installed.packages(), which returns a matrix of all the packages oyu have installed, and indexing to the row of the package you want.
+```{r}
+head(installed.packages(), 2)
+```
+
+If it returns something you have that package.
+```{r}
+installed.packages()["dplyr",]
+```
+
+You can load the library by using the function library.
+```{r}
+library(tidyr)
+library(dplyr)
+```
+
+And you can see the loaded packages using the sessionInfo() function. The packages loaded will be under "other attached packages".
+```{r}
+sessionInfo()
+```
+
+Alternatively, if you dont want to load the entire library you can always simply use a function from that library provided you know which library it comes from.
+
+Simply put the name of the library proceeded by "::" and the name of the fucntion. For example: dplyr::summarize()
+
+## DPLYR and TIDYR
+
+Dplyr and tidyr are two pacages availbe in R which are very powerful tools when it comes to data manipulation.
+
+The data I will be using as an example was scraped online. It contains information on a bunch of publication in psychology and neuroscience.
+```{r, include=FALSE}
+df <-read.csv("~/Coding-Club/DPLYR/data.csv",
+              header=TRUE,
+              row.names = 1, as.is = TRUE)
+```
+Let's take a look at this data frame. It has 18 columns and 47,425 rows. it is in long format (each row is a publication).
+```{r}
+summary(df)
+```
+### PIPIING
+The %>% symbol is used with dplyr to "pipe" ourput of one function to another. It's like a relay race where the function on the left side of the %>% passes its output to the function on the right. Usually, the first element on the left is a data frame you'd like to manipulate. 
+```{r}
+df %>% head(2)
+```
+
+
+You can chain pipe statements so that the output continuously gets passed to another function. Here I'm selecint the first 20 rows and passing only those rows to the function summary.
+
+```{r}
+df %>% head(20) %>% summary()
+```
+
+
+### SELECTING COLUMNS
+This data frame has too many columns, a lot of which we do not need. To filter out the unnecessary columns we can use the function select. Just provide the fucntion with a vector of the names of the columns you want to remove.
+
+REMEMBER TO ALWAYS ASSIGN THE OUTPUT TO A VARIABLE IF YOU WANT TO KEEP IT!
+
+```{r}
+#The following two statements are equivalent
+df = select(df, c("AF", "TI", "LA", "Z9", "U1", "U2", "PY", "WC", "ANIMAL", "FMRI_AB", "DI"))
+
+df = df %>% select(c("AF", "TI", "LA", "Z9", "U1", "U2", "PY", "WC", "ANIMAL", "FMRI_AB", "DI"))
+
+# same as basic R command
+df = df[,c("AF", "TI", "Z9", "U1", "U2", "PY", "WC", "ANIMAL", "FMRI_AB", "DI", "LA")]
+
+```
+
+We can also use a shorthand since the columns we want to keep are all one after the other, we can specify that we want ALL the columns between AF and LA.
+```{r}
+df = df %>% select(AF:LA)
+```
+
+#### SELECTING ROWS
+You can also filter out rows using the filter function. You need to supply the filter function with a logical statement (a true or false statement).
+
+####Logical Statements
+Here are some examples of logical statements. Note that the ! sign means NOT.
+```{r}
+3 > 2
+!(3>2)
+"help"=="Help"
+4 <=6
+```
+Here we're telling the function filter we do not want any rows which have no data for the column Z9. This is done by using the function is.na() which returns a TRUE if the supplied value is empty or FALSE if it contains an element. Since we want to KEEP the rows with data we would use !is.na()
+```{r}
+df =  df %>% filter(!is.na(Z9))
+```
+
+You can combine logical statements using the & operator. This will evaluate to TRUE if and only if BOTH values are TRUE.
+Here we're selecting the rows which are both published after 1999 and with greater than 0 citations.
+```{r}
+#### AND ###
+df =  df %>% filter( PY > 1999 & Z9 > 0)
+```
+
+Yuu can use the OR operator | which will evaluate to TRUE if one of the inputs is TRUE.
+```{r}
+### OR ###
+df = df %>% filter(LA == "English" | LA == "Portuguese")
+```
+
+If you want to combine sveral statements you have to use parentheses.
+```{r}
+df =  df %>% filter( (PY > 1999 & PY < 2018 ) & (LA == "English" | LA == "Portuguese"))
+```
+
+Instead of using a lot of | operators you can also use the %in% operator. This will check is a value is contained within a vector. Here, instead of checking if the Language is one of four values (using four OR operators) we check if Language is in a vactor of languages I want to keep in my data set.
+```{r}
+df = df %>% filter(LA %in% c("English", "Portuguese", "French", "German"))
+```
+
+You can also remove duplicate rows by using the function distinct. This function will only keep one entry per value of a column. Here we're using the DOIs to remove any duplicates. The argument ".keep_all" tells this function to keep all the other columns in th data frame. 
+```{r}
+df = df %>% distinct(DI, .keep_all = TRUE)
+```
+
+### Group_by & Summarize
+One fo the most useful tools in dplyr is the ability to group and summarize your data.
+
+Dplyr lets you group your data by using the function group_by; this function will make groups based on a categorical variable. The function summarize will allow you to apply fucntions to your groups. 
+
+Here we are grouping by the logical variable FMRI_AB which denotes a publication which either does or does not use fMRI. We are also calculating a mean and sd by group.
+```{r}
+df %>% group_by(FMRI_AB) %>% summarize(mean = mean(Z9), sd=sd(Z9))
+```
+We can also use more than one grouping variable. Here we're splitting the data by year and by whether or not the publication used fMRI.
+```{r}
+df %>% filter(!FMRI_AB) %>% group_by(PY,FMRI_AB) %>% summarize(n = length(Z9))
+```
+
+###Mutate
+Dplyr also allows you to make new columns out of old columns by using the function mutate.
+```{r}
+df = df %>% mutate(Years_Since_Pub = 2018 - PY)
+
+df %>% select(Years_Since_Pub) %>% head(10)
+```
+
+###Arrange
+
+You can alos use dplyr to sort the data frame by a certain column in either ascending (default) or descending order.
+```{r}
+df %>% arrange(PY) %>% select(PY) %>% head(10)
+df %>% arrange(desc(PY)) %>% select(PY) %>% head(10)
+df = df %>% arrange(desc(PY))
+```
+
+```{r, include=FALSE}
+impactFactor_wide = read.csv("~/Coding-Club/DPLYR/impactfactor.csv", row.names = 1)
+```
+
+###Long and Wide format
+
+You can use TIDYR to transform your data from long to wide format. Generally speaking, you want your data in long format for analyses and for graphing. However, a lot of the time data is collected in wide format.
+
+Here we have the impact factor for a bunch of journals, over several years. Each row represents a year and each column represents a journal.
+```{r}
+impactFactor_wide %>% head(2)
+```
+What we want is for each row to represent a year and a journal (i.e. a specific data point). To do this we can use the function gather which take as arguments the data frame you want to transform, the name of the column you want to store the old column names, the name of the column you want to store the values, and the columns to transform.
+```{r}
+impactFactor_long = gather(impactFactor_wide, journal, impactFactor, ACTA_PSYC:SOCIAL_NEURO,
+                           factor_key=FALSE)
+```
+You can also go from long to wide by using the function spread. this one takes the data frame you want to transform, the column with the new column names and the column with the values.
+```{r}
+# going from long to wide
+impactFactor_wide2 = spread(impactFactor_long, journal, impactFactor)
+```
+
+###Advanced Column Selection
+
+You can select columns a variety of ways. Here are a few examples:
+Columns which contain something
+```{r}
+#Looks for BIO in the Column
+impactFactor_wide %>% select(contains("BIO")) %>% head(1)
+```
+Columns which end with something
+```{r}
+#Column name ends with PSYCHOLOGY
+impactFactor_wide %>% select(ends_with("PSYCHOLOGY")) %>% head(1)
+```
+Columns which start with something
+```{r}
+#Column name starts with FRONTIERS
+impactFactor_wide %>% select(starts_with("FRONTIERS")) %>% head(1)
+```
+Columns from a list
+```{r}
+#Column name IS EITHER EMOTION OR COGNITION
+impactFactor_wide %>% select(one_of(c("EMOTION", "COGNITION"))) %>% head(1)
+```
+Or selecting all columns EXCEPT a certain few
+```{r}
+# NEGATIVE SIGN MEANS NOT THAT COLUMN
+impactFactor_wide %>% select(-starts_with("FRONTIERS")) %>% head(1)
+```
+Finally, you can also use regular expressions to specify which columns you want.
+
+Regular expressions are a way of specifying a pattern you want to match. Usually these patterns involve some combination of numbers and letters. Here O only gave two simple examples
+```{r}
+# USES REGULAR EXPRESSIONS TO MATCH COLUMN NAMES
+
+#ANYTHING IN [ ] PRECEDING ? WILL BE MATCHED 0 OR 1 TIMES
+impactFactor_wide %>% select(matches("COGN[ITIVE]?[ITION]?")) %>% head(1)
+```
+```{r}
+#ANYTHING IN [ ] PRECEDING * WILL BE MATCHED 0 OR INFINITE TIMES
+impactFactor_wide %>% select(matches("COGN[A-Z]*")) %>% head(1)
+```
+```{r}
+#ANYTHING IN [ ] PRECEDING {n} WILL BE MATCHED exactly n times
+impactFactor_wide %>% select(matches("COGN[A-Z]{5}")) %>% head(1)
+```
+Similarly, you can use grep (a regular expression matcher to filter out rows).
+```{r}
+df %>% filter(grepl("Otto, A. Ross", AF)) %>% select(c(AF))
+```
+##### JOINING DATAFRAMES
+
+Finally, we'll talk about how to merge data frames.
+Let us first load in three data frames.
+```{r, include=FALSE}
+EMOTION = read.csv("~/Coding-club/FMRI/EMOTION.csv", header=TRUE, as.is = TRUE)
+FRONTIERS_PSYC = read.csv("~/Coding-club/FMRI/FRONTIERS_IN_PSYC.csv", header=TRUE, as.is = TRUE)
+
+EMOTION = EMOTION %>% filter(!is.na(Journal.Impact.Factor)) %>%
+  select(c(1,3))
+
+FRONTIERS_PSYC = FRONTIERS_PSYC %>% filter(!is.na(Journal.Impact.Factor)) %>%
+  select(c(1,3))
+```
+We'll be using two data frames of impact factor for two different journals.
+Notice how there are a few missing values in each data frame and that there are some duplictaes (in both data frames).
+```{r}
+EMOTION
+FRONTIERS_PSYC
+```
+Left join, adds the right data frame to the left data frame based on the values the right has in common with the left one BUT IT WILL NOT ADD VALUES FROM THE RIGHT ONE NOT CONTAINED IN THE LEFT.
+```{r}
+left_join(EMOTION, FRONTIERS_PSYC, "Year")
+```
+Same as left join except here the left data frame is added to the right data frame.
+```{r}
+right_join(EMOTION, FRONTIERS_PSYC, "Year")
+```
+Inner Join, joins the data frame based on common values to BOTH.
+```{r}
+inner_join(EMOTION, FRONTIERS_PSYC, "Year")
+```
+Full join will completely join the two data frames.
+```{r}
+full_join(EMOTION, FRONTIERS_PSYC, "Year")
+```
+Semi join will only return the dataframe based on the values in the first data frame contained in the second data frame.
+```{r}
+semi_join(EMOTION, FRONTIERS_PSYC, "Year")
+```
+Anti join will return a data frame based on the values of the first data frame that DONT have a match in the second data frame.
+```{r}
+anti_join(EMOTION, FRONTIERS_PSYC, "Year")
+```
+
+```{r, include=FALSE}
+EMOTION2 = read.csv("~/Coding-club/FMRI/EMOTION 2.csv", header=TRUE, as.is = TRUE)
+
+EMOTION2 = EMOTION2 %>% filter(!is.na(Journal.Impact.Factor)) %>%
+  select(c(1,3))
+```
+```{r}
+EMOTION2
+```
+```{r}
+EMOTION
+```
+Intercet will return the values of the first data frame contained in the second one.
+```{r}
+intersect(EMOTION, EMOTION2)
+```
+Union will join the two data frames but collapsing the columns. 
+```{r}
+union(EMOTION, EMOTION2) 
+```
+setdiff will return the rows in the first data frame not contained in the second data frame.
+```{r}
+setdiff(EMOTION2, EMOTION)
+```
+
