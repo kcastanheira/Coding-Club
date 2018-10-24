@@ -1,0 +1,464 @@
+---
+title: "The ggplot Bible"
+author: "Kevin da Silva Castanheira"
+date: "August 14, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Getting Started
+### Start by loading the Library dplyr, ggplot2, grid, and gridExtra
+
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+Quebec = read.csv("~/coding-club/advanced_ggplot/Quebec.csv")
+```
+# ggplot & dplyr Basics
+
+Let us refresh ourselves with the basics of dplyr and ggplot.
+
+## dplyr
+
+You can use dplyr to manipulate your data and make new columns. Here we will focus on summarizing data (i.e. data reduction).
+
+Let's take a look at the dataframe Quebec. It has 26 columns and a bunch of rows reflecting restaurants in the greater montreal area and their corresponding Yelp reviews. 
+
+```{r, messages=FALSE, warning=FALSE}
+head(Quebec, 2)
+summary(Quebec)
+```
+
+Now let's try to get a mean rating for each postal code. The functions group_by will split your data into groups, piping (%>%) that to the function summarise will produce a summary variable.
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(postal_code) %>% summarise(Mean = mean(stars))
+```
+
+You can get mode than one outcome variable in summarise.
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(postal_code) %>% summarise(Mean = mean(stars), SD= sd(stars), N = n())
+```
+
+And you can choose more than one variable to group by.
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(postal_code, PriceRange) %>% summarise(Mean = mean(stars), SD= sd(stars), N = n())
+```
+
+## ggplot
+
+ggplot works by taking your data and plotting it. I usually like to summarise my data and then pipe it to ggplot.
+
+Every plot starts with the base ggplot statement. This is where you will tell R how you want your graph to be organized (what is your x, y, color variable etc.)
+
+THIS ITSELF WONT PRODUCE A PLOT!!!!
+
+You need to tell R what "shapes" you want it to draw. This is where geom comes in. 
+
+For example you can draw bar graphs:
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + theme_minimal()
+```
+
+For example you can draw scatter plots:
+
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=city, size=city)) + geom_point(alpha=0.5) + theme_minimal()
+```
+
+For example you can draw histograms:
+
+```{r, message=FALSE}
+Quebec %>% 
+  ggplot(aes(stars)) + geom_histogram() + theme_minimal()
+```
+
+For example you can draw Violin plots:
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% 
+  ggplot(aes(Portuguese, stars)) + geom_violin() + theme_minimal()
+```
+... etc.
+
+You can add geoms (error bars, best fit lines etc.) to these basic plots to create more complex plots.
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0, position="dodge") + theme_minimal()
+```
+
+#### Best Fit lines
+Best fit lines are added using the geom_smooth() function.
+geom_smooth() allows you to fit many kinds of fucntions but for now we will explore the linear fits.
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_point() + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0) + geom_smooth(method="lm") + theme_minimal()
+```
+
+And you can remove the ugly shaded grey area (standard error) by supplying the function geom_smooth with the argument se=FLASE.
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_point() + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0) + geom_smooth(method="lm", se=FALSE) + theme_minimal()
+```
+
+Specifying a color/fill/grouping variable will result in two lines fit--one for each group.
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(PriceRange, Italian) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars, color=Italian)) + geom_point() + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0) + geom_smooth(method="lm", se=FALSE) + theme_minimal()
+```
+### Finishing touches
+#### Color, Size, alpha
+You can change the color, fill, size or alpha of your plot based on a variable in your dataset.
+
+Setting color by a continuous (numeric) varibale will make a gradient
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() + theme_minimal()
+```
+
+Which you can change:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() + scale_color_gradientn(colours=c("deepskyblue", "hotpink1")) + theme_minimal()
+```
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() + scale_color_gradientn(colours=c("deepskyblue", "white", "hotpink1")) + theme_minimal()
+```
+
+Or you can map color using discrete variables and not make a gradient:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=city)) + geom_point() + theme_minimal()
+```
+
+And you can change their values also:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=city)) + geom_point() + scale_color_manual(values=c("deepskyblue", "hotpink1", "orchid")) + theme_minimal()
+```
+For example here we have color and size mapping to city and opacity (alpha) set to 0.5:
+
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=city, size=city)) + geom_point(alpha=0.5) + theme_minimal()
+```
+
+And here we have color and alpha mapping to city and size set to 2:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=city, alpha=city)) + geom_point(size=2) + theme_minimal()
+```
+You can even have color, alpha, size mapped to different variables:
+
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=city, size=French)) + geom_point(alpha=0.5) + theme_minimal()
+```
+
+#### Title & Labels
+You can title your graph by using the function ggtitle() and label you x and y axis with the functions xlab() and ylab()
+
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() +ggtitle("TITLE") + xlab("X") + ylab("Y") 
+```
+You can even change the label of the legend:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=city, size=city)) + geom_point() +ggtitle("TITLE") + xlab("X") + ylab("Y") + labs(color="TEST 1", size="TEST 2")
+```
+#### Theme
+You can select a theme to change the look of your graph:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() 
+```
+
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() + theme_classic()
+```
+
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() + theme_void()
+```
+You can also manually change these values yourself to your liking including font size, centering the title, etc. 
+
+Center the title:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() +
+  ggtitle("TITLE") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+Remove the Grid lines:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() +
+  ggtitle("TITLE") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+```
+
+Remove the background color:
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() +
+  ggtitle("TITLE") + theme(panel.background = element_blank())
+```
+
+Change the border of the panels
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() +
+  ggtitle("TITLE") + theme( panel.border = element_rect(colour = "black", fill=NA, size=0.5))
+```
+
+Or change the font size
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() +
+  ggtitle("TITLE") + theme(text = element_text(size=20))
+```
+
+Or do all of it together...
+```{r, message=FALSE, warning=FALSE}
+Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=PriceRange)) + geom_point() +
+  ggtitle("TITLE") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(),  panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+        legend.key.size = unit(1,"cm"), text = element_text(size=20), 
+        plot.title = element_text(hjust = 0.5))
+```
+
+
+#### Horizontal and Verticle Lines
+You can add lines onto your graphs to demark important values.
+
+hline adds horizontal lines (i.e. to demark important y values like p=0.5 if plotting probabilities):
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0, position="dodge") + theme_minimal() + geom_hline(yintercept=3)
+```
+
+And you can change the style of the line by specifying what kind of line you want (or a number 1 = solid, 2 = dashed, 3 = dotted, 4 = dotdash, 5 = longdash)
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0, position="dodge") + theme_minimal() + geom_hline(yintercept=3, linetype='dashed')
+```
+
+Or you can go crazy and add multiple!!!
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0, position="dodge") + theme_minimal() + geom_hline(yintercept=seq(0.5,4.5, 0.5), linetype=4)
+```
+
+vline adds a verticle line (to demark important x values like stimulus onset):
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% 
+  ggplot(aes(review_count, stars)) + geom_point() + theme_minimal() + geom_vline(xintercept=0, linetype=3)
+```
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% 
+  ggplot(aes(review_count, stars)) + geom_point() + theme_minimal() + geom_vline(xintercept=seq(0, 15, 2.5), linetype=5)
+```
+
+# Facet Wrapping
+
+Facet wrapping is a way of separating your graph into panels based on variables within your dataset. 
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>%
+  ggplot(aes(review_count, stars)) + geom_point(stat = "summary", position="dodge")  + theme_minimal() + facet_wrap(~PriceRange)
+```
+
+You can specify how you want these plots to be arranged within your graph by specifying the number of columns or rows.
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>%
+  ggplot(aes(review_count, stars)) + geom_point(stat = "summary", position="dodge")  + theme_minimal() + facet_wrap(~PriceRange, nrow=1)
+```
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% 
+  ggplot(aes(review_count, stars)) + geom_point(stat = "summary", position="dodge")  + theme_minimal() + facet_wrap(~PriceRange, ncol=1)
+```
+
+You can facet wrap by multiple variables. The order of the variables you specify to facet wrap will change how the plot is made
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% 
+  ggplot(aes(review_count, stars)) + geom_point(stat = "summary", position="dodge")  + theme_minimal() + facet_wrap(~PriceRange+French, nrow=2, ncol=4)
+```
+```{r, messages=FALSE, warning=FALSE}
+Quebec %>% 
+  ggplot(aes(review_count, stars)) + geom_point(stat = "summary", position="dodge")  + theme_minimal() + facet_wrap(~French+PriceRange, nrow=2, ncol=4)
+```
+
+You can pipe your data into functions like revalue form the plyr package (DO NOT LOAD THE PLYR PACKAGE AND DPLYR SIMULTANEOUSLY!!!!) to relabel your variables before graphing.
+
+```{r, messages=FALSE, warning=FALSE}
+Quebec$French = plyr::revalue(as.factor(Quebec$French), c("TRUE"="French", "FALSE"="Other"))
+Quebec %>%
+  ggplot(aes(review_count, stars)) + geom_point(stat = "summary", position="dodge")  + theme_minimal() + facet_wrap(~French+PriceRange, nrow=2, ncol=4)
+```
+
+Facet Wrapping is very useful when you want to arrange multiple plots with the same dependant and independant variables.
+
+But what happens when we want to plot multiple graphs in the same figure with different variables?
+
+# Arranging Plots
+
+With the libraries grid and gridExtra, you can arrange plots of different variables all within the same figure
+
+```{r, messages=FALSE, warning=FALSE}
+plot1 <- Quebec %>% filter(city %in% c("MONTREAL", "LAVAL", "WESTMOUNT")) %>%
+  ggplot(aes(PriceRange, stars, color=city, size=city)) + geom_point(alpha=0.5) + theme_minimal()
+
+plot2 <- Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0, position="dodge") + theme_minimal() + geom_hline(yintercept=3)
+
+plot3 <- Quebec %>% 
+  ggplot(aes(stars)) + geom_histogram() + theme_minimal()
+
+plot4 <- Quebec %>% 
+  ggplot(aes(French, stars)) + geom_violin() + theme_minimal()
+
+grid.arrange(plot1, plot2, plot3, plot4)
+```
+
+You can change the way the plots are arranged by specifying the number of rows and columns
+```{r, messages=FALSE, warning=FALSE}
+grid.arrange(plot2, plot3, plot4, nrow=1)
+grid.arrange(plot2, plot3, ncol=1, nrow=2)
+```
+
+You can achieve more complex designs (non-grid layouts) by specifying the widths and layouts you want.
+
+Let's explore our options.
+
+Let's make a 2x2 figure where the left graphs are twice as wide as the right hand graphs. Width specifies the width of each column. Layout_matrix specifies how the graphs are to be laid out, row-by-row.
+
+```{r, messages=FALSE, warnings=FALSE}
+grid.arrange(plot1, plot2, plot3, plot4,
+  widths = c(2, 1),
+  layout_matrix = rbind(c(1, 2),
+                        c(3, 4)))
+
+```
+
+Now Let's make only the top-left graph large and the others small. Notice how we have to leave a blank space on the bottom row for the graph that is missing and the first graph takes up two columns.
+
+```{r, messages=FALSE, warnings=FALSE}
+grid.arrange(plot1, plot2, plot3, plot4,
+  widths = c(1, 1, 1),
+  layout_matrix = rbind(c(1, 1, 2),
+                        c(NA, 3, 4)))
+
+```
+
+Now try making the top left graph be 3 times as large as the other graph in it's row but have the bottom two split evenly. FOr this we're going to need 6 columns.
+
+```{r, messages=FALSE, warnings=FALSE}
+grid.arrange(plot1, plot2, plot3, plot4,
+  widths = c(1, 1, 1, 1, 1, 1),
+  layout_matrix = rbind(c(1, 1, 1, 1, 2, 2),
+                        c(3, 3, 3, 4, 4, 4)))
+
+```
+
+Now let's add a titles to the subplots!
+
+```{r, messages=FALSE, warnings=FALSE}
+grid.arrange(plot1 + ggtitle("A"), plot2 + ggtitle("B"), plot3 + ggtitle("C"), plot4 + ggtitle("D"),
+  widths = c(1, 1, 1, 1, 1, 1),
+  layout_matrix = rbind(c(1, 1, 1, 1, 2, 2),
+                        c(3, 3, 3, 4, 4, 4)))
+
+```
+
+#### Titles 
+What about an general title.
+
+```{r, messages=FALSE, warnings=FALSE}
+grid.arrange(plot1 + ggtitle("A"), plot2 + ggtitle("B"), plot3 + ggtitle("C"), plot4 + ggtitle("D"),
+top=textGrob("Figure 1"),
+  widths = c(1, 1, 1, 1, 1, 1),
+  layout_matrix = rbind(c(1, 1, 1, 1, 2, 2),
+                        c(3, 3, 3, 4, 4, 4)))
+
+```
+
+#### Graph Inserts
+
+To insert a smaller graph in your other graph you first must turn your ggplot graph into a ggplorGrob. This will allow you to insert it into any figure.
+
+```{r, messages=FALSE, warning=FALSE}
+plot2 <- Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0, position="dodge") + theme_minimal() + geom_hline(yintercept=3)
+
+plot2Grob = ggplotGrob(plot2 + theme(plot.background = element_rect(colour = "black")))
+
+Quebec %>% 
+  ggplot(aes(stars)) + geom_histogram() + theme_minimal() +
+  annotation_custom(
+    grob = plot2Grob,
+    xmin = 1,
+    xmax = 3,
+    ymin = 150,
+    ymax = 300)
+
+```
+
+You can insert text.
+
+```{r, messages=FALSE, warning=FALSE}
+plot2 <- Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0, position="dodge") + theme_minimal() + geom_hline(yintercept=3)
+
+Grob_insert = textGrob("Kevin Made This!!")
+
+Quebec %>% 
+  ggplot(aes(stars)) + geom_histogram() + theme_minimal() +
+  annotation_custom(
+    grob = Grob_insert,
+    xmin = 1,
+    xmax = 3,
+    ymin = 150,
+    ymax = 300)
+
+```
+
+Or you can add a table which summarizes the average rating of Portuguese and non-Portuguese Restaurants.
+
+```{r, messages=FALSE, warning=FALSE}
+plot2 <- Quebec %>% group_by(PriceRange) %>% summarise(sem= sd(stars)/sqrt(length(stars)), stars=mean(stars)) %>% 
+  ggplot(aes(PriceRange, stars)) + geom_bar(stat = "summary", position="dodge") + geom_errorbar(aes(ymin=stars-sem, ymax=stars+sem), width=0, position="dodge") + theme_minimal() + geom_hline(yintercept=3)
+
+Grob_insert = tableGrob(Quebec %>% group_by(Portuguese) %>% summarise(mean=mean(stars)), rows = c())
+
+Quebec %>% 
+  ggplot(aes(stars)) + geom_histogram() + theme_minimal() +
+  annotation_custom(
+    grob = Grob_insert,
+    xmin = 1,
+    xmax = 3,
+    ymin = 150,
+    ymax = 300)
+
+```
+
