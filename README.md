@@ -6,7 +6,7 @@ October 10th - Data Manipulation wiht Dplyr
 
 October 24th - Plotting with ggplot 
 
-November 7th - ????? 
+November 7th - TBD 
 
-November 21st - ????? 
+November 21st - TBD 
 
